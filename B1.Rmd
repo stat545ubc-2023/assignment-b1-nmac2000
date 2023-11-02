@@ -10,14 +10,6 @@ library(palmerpenguins)
 head(penguins)
 penguins
 ```
-```{r}
-missing_sum <- function(data,variable) {
-  data %>% 
-    summarize(across({{variable}}, ~sum(is.na(.x))))
-}
-missing_sum(penguins,bill_length_mm)
-```
-
 
 # Exercise 1 and 2
 ```{r}
@@ -26,19 +18,25 @@ missing_sum(penguins,bill_length_mm)
 #' This model creates a residual plot for a linear model with 1 explanatory variable. This can be used to test if the model meets the linearity and equal variance assumptions
 #'
 #' @param df **D**ata **f**rame being used, hence **df**
-#' @param y Numeric vector from df, which is the response variable, or "y" variable, need to be in ""
+#' @param y Numeric vector from df, which is the response variable, or "y" variable, need to be in df$column_name
 #' @param b1 Numeric Vector from df, which is the explanatory variable. In simple linear regression, the slope associated with the first x variable would be b1, need to be in ""
 #'
 #' @return A graph
 
 residual_plot <- function(df,y,b1){
-  model_formula <- as.formula(paste(y, "~", b1))
-  model <- lm(model_formula, data = df)
+  if(!is.numeric({{b1}})){
+    stop()
+  }
+  if(!is.numeric({{y}})){
+    stop()
+  }
+  model <- lm({{y}} ~ {{b1}}, data=df)
   ggplot(model, aes(x = .fitted, y = .resid)) +
   geom_point() +
   geom_hline(yintercept = 0, color="red") +
   labs(title='Residual Plot', x='Fitted Values', y='Residuals')
 }
+
 ```
 
 # Exercise 3
@@ -47,21 +45,40 @@ residual_plot <- function(df,y,b1){
 x <- c(2,45,6,73,24,4,23,5,645,23,34,65)
 y <- c(32,45,1,34,5,67,3,45,65,76,45,23)
 test <- tibble(x,y)
-residual_plot(test,"x","y")
+residual_plot(test,test$x,test$y)
 
 #Test 2
 library(palmerpenguins)
-residual_plot(penguins, "bill_length_mm", "bill_depth_mm")
+residual_plot(penguins, penguins$bill_depth_mm, penguins$bill_length_mm)
 
 #Test 3
 library(gapminder)
-residual_plot(gapminder, "lifeExp", "gdpPercap")
+residual_plot(gapminder, gapminder$lifeExp,gapminder$gdpPercap)
 ```
 # Exercise 4
 ```{r}
 library(testthat)
-residual_plot(penguins, "bill_length_mm","bill_depth_mm")
-expect_error(residual_plot(penguins, "bill_length_mm","bill_depth_mm"))
+
+test_that("Function returns ggplot object",{
+  is.plot <- residual_plot(gapminder,gapminder$lifeExp,gapminder$gdpPercap)
+  expect_is(is.plot,"ggplot")
+})
+ 
+test_that("Function works with NA values", {
+  x <- c(1,2,NA,4,NA,6,NA,NA, 9, 10)
+  y <- c(1,2,3,4,5,6,7,8,9,10)
+  test <- tibble(x,y)
+  withNA <- residual_plot(test,test$x,test$y,na.rm = FALSE)
+  withoutNA <- residual_plot(test,test$x,test$y,na.rm = TRUE)
+  expect_equal(withNA,withoutNA)
+})
+
+test_that("This function only works for numeric values", {
+  expect_error(residual_plot(penguins, penguins$species, penguins$bill_length_mm))
+  expect_error(residual_plot(penguins, penguins$bill_length_mm, penguins$species))
+  expect_no_error(residual_plot(penguins, penguins$bill_depth_mm, penguins$bill_length_mm))
+})
+
 ```
 
 
